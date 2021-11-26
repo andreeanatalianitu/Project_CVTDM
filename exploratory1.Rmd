@@ -106,7 +106,14 @@ df1$Output <- as.factor(df1$Output)
 str(df1)
 ```
 
-
+```{r fig.height=6, fig.width=6}
+numeric.df=df1[,c(1,7,14:34,36:50)]
+corr <- round(cor(numeric.df), 3)
+ggcorrplot(corr, hc.order = TRUE,
+   outline.col = "white",
+   ggtheme = ggplot2::theme_gray,
+   colors = c("#6D9EC1", "white", "#E46726"))
+```
 
 
 
