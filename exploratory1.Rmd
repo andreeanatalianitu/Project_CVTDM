@@ -9,13 +9,34 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ```{r}
-setwd("C:/Users/andre/Desktop/Creating Value Project/Project_CVTDM")
-df <- read.csv("onlinedeliverydata.csv", header = TRUE, sep = ",")
+df <- read.csv(file = "/Users/mariaoshyyko/Documents/GitHub/Project_CVTDM/onlinedeliverydata.csv", header = T, sep = ",")
+#setwd("C:/Users/andre/Desktop/Creating Value Project/Project_CVTDM")
+#df <- read.csv("onlinedeliverydata.csv", header = TRUE, sep = ",")
 df <- df[,-c(8,9,10)]
 str(df)
 attach(df)
 ```
 
+
+```{r}
+subset.class.category=df[,c(2:6,14:50)]
+
+for (i in c(2:6,10:50)) {
+
+explore1=df[,c(i, 51)]
+explore1=melt(explore1, id="Output")
+explore.cast=dcast(explore1, Output~value, fun.aggregate=length)
+explore2=melt(explore.cast, id="Output")
+
+explore2$Output=as.factor(explore2$Output)
+
+print(ggplot(explore2) + 
+  scale_fill_brewer(palette="Pastel2")+
+  geom_col(aes(x=explore2$variable, y=explore2$value, fill=explore2$Output),  position = "dodge")+
+  labs(title=names(df)[c(i)], x="", y="value",fill="Output:",color=""))+
+  theme_minimal()
+}
+```
 
 ```{r}
 library(dplyr)
@@ -85,9 +106,6 @@ df1$Output <- as.factor(df1$Output)
 str(df1)
 ```
 
-```{r}
-
-```
 
 
 
