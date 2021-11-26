@@ -1,0 +1,101 @@
+---
+title: 'Project'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+setwd("C:/Users/andre/Desktop/Creating Value Project/Project_CVTDM")
+df <- read.csv("onlinedeliverydata.csv", header = TRUE, sep = ",")
+df <- df[,-c(8,9,10)]
+str(df)
+attach(df)
+```
+
+
+```{r}
+library(dplyr)
+
+variables <- data.frame(name = colnames(df))
+
+df1 <- df[,-52]
+
+str(df[,c(14:33,37:41)])
+
+for (i in c(14:33,37:41)) {
+  df1[,i] <- recode(df1[,i], "Strongly Agree"=5, "Agree"=4,"Neutral"=3,"Disagree"=2,"Strongly Disagree"=1)
+}
+
+library(naniar)
+gg_miss_var(df1[,c(14:33,37:41)], show_pct = TRUE)
+
+levels(df[,51])
+df1$Output <- recode(df1$Output, "Yes"=1, "No"=0)
+gg_miss_var(df[,50:51], show_pct = TRUE)
+
+levels(df[,43])
+str(df[,43:50])
+
+for (i in c(43:50)) {
+  df1[,i] <- recode(df1[,i], "Important"=4, "Moderately Important"=3, "Slightly Important"=2, "Unimportant"=1, "Very Important"=5)
+}
+gg_miss_var(df1[,43:50], show_pct = TRUE)
+
+
+levels(df[,35])
+
+
+levels(df[,34])
+str(df[,c(34,42)])
+for (i in c(34,42)) {
+  df1[,i] <- recode(df1[,i], "Maybe"=2, "No"=1, "Yes"=3)
+}
+gg_miss_var(df1[,c(34,42)], show_pct = TRUE)
+
+levels(df[,12])
+str(df[,c(12:13)])
+levels(df[,11])
+levels(df[,10])
+levels(df[,9])
+levels(df[,8])
+levels(df[,6])
+levels(df[,5])
+levels(df[,4])
+levels(df[,3])
+
+levels(df[,2])
+df1$Gender <- recode(df1$Gender, "Female"=1, "Male"=0)
+gg_miss_var(df1[,1:2], show_pct = TRUE)
+
+
+str(df[,c(1,7,36)])
+
+```
+
+
+
+```{r}
+#str(df1)
+df1$Gender <- as.factor(df1$Gender)
+df1$Output <- as.factor(df1$Output)
+str(df1)
+```
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
