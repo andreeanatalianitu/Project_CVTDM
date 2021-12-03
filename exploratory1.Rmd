@@ -9,19 +9,21 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ```{r}
-df <- read.csv(file = "/Users/mariaoshyyko/Documents/GitHub/Project_CVTDM/onlinedeliverydata.csv", header = T, sep = ",")
+df <- read.csv(file = "C:/Users/leomi/Downloads/Data-mining/Project_CVTDM/onlinedeliverydata.csv", header = T, sep = ",")
 #setwd("C:/Users/andre/Desktop/Creating Value Project/Project_CVTDM")
 #df <- read.csv("onlinedeliverydata.csv", header = TRUE, sep = ",")
 df <- df[,-c(8,9,10)]
 str(df)
 attach(df)
+View(df)
 ```
 
 
 ```{r}
+library(reshape2)
 subset.class.category=df[,c(2:6,14:50)]
 
-for (i in c(2:6,10:50)) {
+for (i in c(2:6,8:50)) {
 
 explore1=df[,c(i, 51)]
 explore1=melt(explore1, id="Output")
@@ -37,6 +39,7 @@ print(ggplot(explore2) +
   theme_minimal()
 }
 ```
+
 
 ```{r}
 library(dplyr)
@@ -57,6 +60,9 @@ gg_miss_var(df1[,c(14:33,37:41)], show_pct = TRUE)
 levels(df[,51])
 df1$Output <- recode(df1$Output, "Yes"=1, "No"=0)
 gg_miss_var(df[,50:51], show_pct = TRUE)
+
+levels(as.factor(df1[,5]))
+df1$Monthly.Income=recode(df$Monthly.Income, "10001 to 25000"=17500.5, "25001 to 50000"=37500, "Below Rs.10000" = 10000, "More than 50000"=50000, "No Income"=0 )
 
 levels(df[,43])
 str(df[,43:50])
@@ -101,25 +107,239 @@ str(df[,c(1,7,36)])
 
 ```{r}
 #str(df1)
-df1$Gender <- as.factor(df1$Gender)
-df1$Output <- as.factor(df1$Output)
+#df1$Gender <- as.factor(df1$Gender)
+#df1$Output <- as.factor(df1$Output)
+df1=df1[,-c(8:13)]
 str(df1)
+
 ```
 
 ```{r fig.height=6, fig.width=6}
-numeric.df=df1[,c(1,7,14:34,36:50)]
-corr <- round(cor(numeric.df), 3)
+numeric.df=df1[,-c(3,4,6,29)]
+library(ggplot2)
+library(ggcorrplot)
+corr <- round(cor(numeric.df,method="spearman"), 3)
 ggcorrplot(corr, hc.order = TRUE,
    outline.col = "white",
    ggtheme = ggplot2::theme_gray,
    colors = c("#6D9EC1", "white", "#E46726"))
 ```
+### VIF
+```{r}
+VIF = function(matx, y){
+  #
+  fit.dat = data.frame(y=y, matx)
+  fit.lm = lm(y ~ . , data=fit.dat)
+  #
+  vifs = vif.lm.car(fit.lm)
+  #
+  cat("\n")
+  print(signif(vifs))
+  cat("\n  Mean:", format(signif(mean(vifs))), "\n\n")
+}
+vif.lm.car = function(mod, ...) 
+{
+  # Calculates variance-inflation and generalized variance-inflation factors for linear and generalized linear models. 
+  #
+  # "vif" function from package "car" (Version 2.0-12)
+  # Source: http://cran.r-project.org/web/packages/car/
+  # R documentation: ?car::vif
+  if (any(is.na(coef(mod))))
+    stop("there are aliased coefficients in the model")
+  v <- vcov(mod)
+  assign <- attributes(model.matrix(mod))$assign
+  if (names(coefficients(mod)[1]) == "(Intercept)") {
+    v <- v[-1, -1]
+    assign <- assign[-1]
+  }
+  else warning("No intercept: vifs may not be sensible.")
+  terms <- labels(terms(mod))
+  n.terms <- length(terms)
+  if (n.terms < 2) 
+    stop("model contains fewer than 2 terms")
+  R <- cov2cor(v)
+  detR <- det(R)
+  result <- matrix(0, n.terms, 3)
+  rownames(result) <- terms
+  colnames(result) <- c("GVIF", "Df", "GVIF^(1/(2*Df))")
+  for (term in 1:n.terms) {
+    subs <- which(assign == term)
+    result[term, 1] <- det(as.matrix(R[subs, subs])) * det(as.matrix(R[-subs, -subs]))/detR
+    result[term, 2] <- length(subs)
+  }
+  if (all(result[, 2] == 1)) 
+    result <- result[, 1]
+  else result[, 3] <- result[, 1]^(1/(2 * result[, 2]))
+  result
+}
+
+VIF(numeric.df[,-41], numeric.df[,41])
+```
+
+### DA
+
+```{r}
+df1$Marital.Status =as.factor(df1$Marital.Status)
+df1$Occupation=as.factor(df1$Occupation)
+df1$Educational.Qualifications=as.factor(df1$Educational.Qualifications)
+df1$Order.Time=as.factor(df1$Order.Time)
+library(caret)
+dummies=dummyVars(~., data=df1)
+df_dummy=as.data.frame(predict(dummies, newdata=df1))
+
+df_dummy=df_dummy[,-c(4,7,15,38)]
+str(df_dummy)
+```
+
+
+```{r}
+library(gridExtra)
+library(ggplot2)
+
+boxplot_exp<-ggplot(df_dummy) +
+  geom_boxplot(aes(x=Age), fill="white") +
+  labs(title="Range of Age values")+
+  theme_minimal()+
+  theme(plot.title = element_text(face="bold"))
+median=median(df_dummy[,1])
+mean=mean(df_dummy[,1])
+hist_exp<-ggplot(df_dummy) +
+  geom_histogram(aes(x=Age), bins=10, fill = "slategray1",color="grey") +
+  geom_vline (aes(xintercept=median,col="median"))+
+  geom_vline(aes(xintercept=mean,col="mean"))+
+  labs(title="Distribution of Age",color="")+
+  theme_minimal()+
+  theme(plot.title = element_text(face="bold"))
+grid.arrange(boxplot_exp, hist_exp, ncol=2)
+
+
+```
+
+```{r}
+boxplot_exp<-ggplot(df_dummy) +
+  geom_boxplot(aes(x=Monthly.Income), fill="white") +
+  labs(title="Range of Age values")+
+  theme_minimal()+
+  theme(plot.title = element_text(face="bold"))
+median=median(df_dummy[,8])
+mean=mean(df_dummy[,8])
+hist_exp<-ggplot(df_dummy) +
+  geom_histogram(aes(x=Monthly.Income), bins=10, fill = "slategray1",color="grey") +
+  geom_vline (aes(xintercept=median,col="median"))+
+  geom_vline(aes(xintercept=mean,col="mean"))+
+  labs(title="Distribution of Age",color="")+
+  theme_minimal()+
+  theme(plot.title = element_text(face="bold"))
+grid.arrange(boxplot_exp, hist_exp, ncol=2)
+```
+
+```{r}
+boxplot_exp<-ggplot(df_dummy) +
+  geom_boxplot(aes(x=Maximum.wait.time ), fill="white") +
+  labs(title="Range of Age values")+
+  theme_minimal()+
+  theme(plot.title = element_text(face="bold"))
+median=median(df_dummy[,37])
+mean=mean(df_dummy[,37])
+hist_exp<-ggplot(df_dummy) +
+  geom_histogram(aes(x=Maximum.wait.time), bins=10, fill = "slategray1",color="grey") +
+  geom_vline (aes(xintercept=median,col="median"))+
+  geom_vline(aes(xintercept=mean,col="mean"))+
+  labs(title="Distribution of Age",color="")+
+  theme_minimal()+
+  theme(plot.title = element_text(face="bold"))
+grid.arrange(boxplot_exp, hist_exp, ncol=2)
+```
+
+```{r}
+library(caret)
+norm.values.da = preProcess(df_dummy[,c(1,8,37)], method=c("center","scale"))
+norm.da.df = predict(norm.values.da, df_dummy)
+
+library(DiscriMiner)
+library(MASS)
+model1 <- lda(Output~., data = norm.da.df)
+model1
+
+library(corrr)
+#corr(norm.da.df)
+#ggcorrplot(corr, hc.order = TRUE, outline.col = "white",ggtheme = ggplot2::theme_gray,colors = c("#6D9EC1", "white", "#E46726"))
+str(df_dummy)
+
+norm.da.df$Output=as.factor(norm.da.df$Output)
+var.selct.df1 <- linDA(norm.da.df[,-c(52)], norm.da.df[,52])
+scores=var.selct.df1$functions 
+score=as.data.frame(scores)
+colnames(score)=c("No.score","Yes.score")
+attach(score)
+new.score=score[order(-Yes.score),]
+new.score
+detach(score)
+```
 
 
 
+```{r}
+library(caret)
+norm.values.da = preProcess(df_dummy[,-c(2:7,9:12,35,36,52)], method=c("center","scale"))
+norm.da.df = predict(norm.values.da, df_dummy)
+
+library(DiscriMiner)
+library(MASS)
+model1 <- lda(Output~., data = norm.da.df)
+model1
+
+library(corrr)
+#corr(norm.da.df)
+#ggcorrplot(corr, hc.order = TRUE, outline.col = "white",ggtheme = ggplot2::theme_gray,colors = c("#6D9EC1", "white", "#E46726"))
+
+
+norm.da.df$Output=as.factor(norm.da.df$Output)
+var.selct.df1 <- linDA(norm.da.df[,-c(52)], norm.da.df[,52])
+scores=var.selct.df1$functions 
+score=as.data.frame(scores)
+colnames(score)=c("No.score","Yes.score")
+attach(score)
+new.score=score[order(-Yes.score),]
+new.score
+detach(score)
+```
+
+
+### Logistic regression
+
+Next steps will be setting seed, partitioning the data into training(50%), validation(30%) and test(20%) datasets.
+
+```{r}
+logit.df=df1
+for (i in c(3:4,6,8:13,35)){
+  logit.df[,i]=as.factor(logit.df[,i])
+}
+str(logit.df)
+
+set.seed(1)
+
+train.index <- sample(rownames(logit.df), dim(logit.df)[1]*0.5)
+valid.index <- sample(setdiff(rownames(logit.df), train.index), dim(logit.df)[1]*0.3)
+test.index <- setdiff(rownames(logit.df), union(train.index, valid.index))
+
+train.df <- logit.df[train.index, ]
+valid.df <- logit.df[valid.index, ]
+test.df <- logit.df[test.index, ]
+```
 
 
 
+```{r}
+logit_reg <- glm(Output ~ ., data = train.df, family = "binomial")
+options(scipen=999)
+summary(logit_reg)
+```
+
+```{r}
+forward <- step(logit_reg,direction ="forward")
+summary(forward)
+```
 
 
 
