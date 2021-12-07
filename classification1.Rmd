@@ -8,9 +8,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-#df <- read.csv(file = "C:/Users/leomi/Downloads/Data-mining/Project_CVTDM/onlinedeliverydata.csv", header = T, sep = ",")
-setwd("C:/Users/andre/Desktop/Creating Value Project")
-df <- read.csv("onlinedeliverydata.csv", header = TRUE, sep = ",")
+df <- read.csv(file = "C:/Users/leomi/Downloads/Data-mining/Project_CVTDM/onlinedeliverydata.csv", header = T, sep = ",")
+#setwd("C:/Users/andre/Desktop/Creating Value Project")
+#df <- read.csv("onlinedeliverydata.csv", header = TRUE, sep = ",")
 df <- df[,-c(8,9,10)]
 str(df)
 attach(df)
@@ -122,15 +122,254 @@ print(table(valid$Output) / table(df2$Output)) #Validation set partition
 print(table(test$Output) / table(df2$Output)) #Test set partition
 ```
 
+## Discriminant analysis
+
+```{r}
+library(MASS)
+library(DiscriMiner)
+```
 
 
+```{r}
+#da1.reg <- linDA(train[,1:30], train[,31])
+#da1.reg
+#View(train)
+```
+
+```{r}
+model1 <- lda(Output~., data = train)
+model1
+```
 
 
+```{r}
+pred.valid=predict(model1,valid[,-31])
+
+cm.da.valid=confusionMatrix(as.factor(pred.valid$class),as.factor(valid$Output) ,positive = "1")
+cm.da.valid
+```
+
+```{r}
+fourfoldplot(cm.da.valid$table)
+```
+
+```{r}
+da.pred.test=predict(model1,test[,-31])
+
+cm.da.test=confusionMatrix(as.factor(da.pred.test$class),as.factor(test$Output) ,positive = "1")
+cm.da.test
+```
+
+```{r}
+fourfoldplot(cm.da.test$table)
+```
+
+## Neural Nets
+
+```{r}
+
+```
 
 
+## Classification Tree
+
+#### Full-grown tree
+```{r}
+library(forecast)
+library(caret)
+library(Metrics)
+library(dplyr)
+library(reshape2)
+library(scales)
+library(rpart)
+
+set.seed(1)
+full_CT = rpart(Output ~ ., data = train, method = "class", cp=0, minbucket=1, minsplit = 1, xval =5)
+length(full_CT$frame$var[full_CT$frame$var == "<leaf>"])
+```
+
+```{r}
+library(ggplot2) 
+library(cowplot)
+library(rpart.plot)
 
 
+rpart.plot(full_CT, type = 1, extra = 1, under = TRUE, split.font = 1, varlen = -10)
+```
+
+```{r}
+row_minxerr=which.min(full_CT$cptable[,4])
+cp_minxerr=full_CT$cptable[row_minxerr,1]
+cp_minxerr
+```
+```{r}
+minxerr=full_CT$cptable[row_minxerr,4]
+xstd_minxerr=full_CT$cptable[row_minxerr,5]
+cp_best_pruned_CT=minxerr+xstd_minxerr
+cp_best_pruned_CT
+```
+```{r}
+printcp(full_CT)[,4]
+```
+```{r}
+cp_xerr=full_CT$cptable[5,1]
+cp_xerr
+```
+```{r}
+plotcp(full_CT) + 
+abline(v = row_minxerr, lty = "dashed")+
+abline(v = 5, lty = "dotted")
+```
+
+Let’s prune 2 classification trees: first one with CP of 1 split(which has the lowest cross-validation error) and second with CP of 7 splits(best-pruned classification tree)
+
+#### Pruned classification tree
+```{r}
+set.seed(1)
+pruned_CT <- prune(full_CT, cp = cp_minxerr)
+length(pruned_CT$frame$var[pruned_CT$frame$var == "<leaf>"])
+```
+```{r}
+rpart.plot(pruned_CT, type = 1, extra = 1, under = TRUE, split.font = 1, varlen = -10)
+```
+
+```{r}
+pred_valid_pruned_CT= predict(pruned_CT, valid, type="class")
+
+valid$Output=as.factor(valid$Output)
+CT_cm_valid=confusionMatrix(pred_valid_pruned_CT, valid$Output , positive = "1")
+CT_cm_valid
+```
+
+```{r}
+fourfoldplot(confusionMatrix(pred_valid_pruned_CT, valid$Output , positive = "1")$table)
+```
 
 
+```{r}
+pred_test_pruned_CT= predict(pruned_CT, test, type="class")
+
+test$Output=as.factor(test$Output)
+CT_cm_valid=confusionMatrix(pred_test_pruned_CT, test$Output , positive = "1")
+CT_cm_valid
+```
+
+```{r}
+fourfoldplot(confusionMatrix(pred_test_pruned_CT, test$Output , positive = "1")$table)
+```
 
 
+#### Best pruned classification tree
+
+```{r}
+best_pruned_CT <- prune(full_CT,cp = cp_xerr)
+length(best_pruned_CT$frame$var[best_pruned_CT$frame$var == "<leaf>"])
+```
+
+```{r}
+rpart.plot(best_pruned_CT, type = 1, extra = 1, under = TRUE, split.font = 1, varlen = -10)
+```
+
+```{r}
+pred_valid_best_pruned_CT= predict(best_pruned_CT, valid, type="class")
+
+valid$Output=as.factor(valid$Output)
+CT_cm_valid=confusionMatrix(pred_valid_best_pruned_CT, valid$Output , positive = "1")
+CT_cm_valid
+```
+
+```{r}
+fourfoldplot(confusionMatrix(pred_valid_best_pruned_CT, valid$Output , positive = "1")$table)
+```
+
+
+```{r}
+pred_test_best_pruned_CT= predict(best_pruned_CT, test, type="class")
+
+test$Output=as.factor(test$Output)
+CT_cm_valid=confusionMatrix(pred_test_best_pruned_CT, test$Output , positive = "1")
+CT_cm_valid
+```
+
+```{r}
+fourfoldplot(confusionMatrix(pred_test_best_pruned_CT, test$Output , positive = "1")$table)
+```
+
+## Boosted
+
+```{r}
+library(cowplot)
+library(caret)
+library(rpart)
+library(gains)
+library(adabag)
+library(randomForest)
+library(reshape2)
+```
+
+
+```{r}
+set.seed(1)
+boost <- boosting(Output ~ ., data = train)
+```
+
+
+```{r}
+pred_boost_valid <- predict(boost, valid)
+boost_valid.cm = confusionMatrix(as.factor(pred_boost_valid$class), valid$Output, positive = "1")
+
+boost_valid.cm
+```
+
+```{r}
+pred_boost_test <- predict(boost, test)
+boost_test.cm = confusionMatrix(as.factor(pred_boost_test$class), (test$Output),positive = "1")
+
+boost_test.cm
+```
+
+## Bagged
+
+```{r}
+set.seed(1)
+bagt <- bagging(Output ~ ., data = train)
+```
+
+
+```{r}
+pred <- predict(bagt, valid)
+bag_valid.cm = confusionMatrix(as.factor(pred$class), valid$Output,positive = "1")
+
+bag_valid.cm
+```
+
+```{r}
+pred <- predict(bagt, test)
+bag_test.cm = confusionMatrix(as.factor(pred$class), test$Output,positive = "1")
+
+bag_test.cm
+```
+
+## Random
+
+```{r}
+set.seed(1)
+rf <- randomForest(Output ~ ., data = train, mtry=4, importance = T)
+```
+
+
+```{r}
+pred <- predict(rf, valid)
+
+rf_valid.cm = confusionMatrix(as.factor(pred), valid$Output,positive = "1")
+
+rf_valid.cm
+```
+
+```{r}
+pred <- predict(rf, test)
+
+rf_valid.cm = confusionMatrix(as.factor(pred), test$Output, positive = "1")
+
+rf_valid.cm
+```
