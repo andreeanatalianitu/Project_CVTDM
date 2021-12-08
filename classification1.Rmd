@@ -167,9 +167,95 @@ fourfoldplot(cm.da.test$table)
 ## Neural Nets
 
 ```{r}
-
+library(neuralnet)
+library(caret)
+library(nnet)
+library(NeuralNetTools)
+library(boot)
+library(plyr)
+library(ggplot2)
+library(reshape)
 ```
 
+
+```{r}
+train.dummy.scale=train.dummy
+valid.dummy.scale=valid.dummy
+test.dummy.scale=test.dummy
+
+vars = c(1,7,12:36)
+norm.values <- preProcess(train.dummy[, vars], method="range") 
+
+train.dummy.scale[,vars] = predict(norm.values, train.dummy[,vars])
+valid.dummy.scale[,vars] = predict(norm.values, valid.dummy[,vars])
+test.dummy.scale[,vars] = predict(norm.values, test.dummy[,vars])
+
+scale_back_min_max_score <- function(x_) {
+  min_x = min(train.dummy$Output)
+  max_x = max(train.dummy$Output)
+  x = sapply(x_, function(x__) x__*(max_x - min_x) + min_x)
+  return(x)
+}
+```
+
+#### 1 layer 5 nodes
+```{r}
+set.seed(1)
+
+names(train.dummy.scale)[names(train.dummy.scale) == "Occupation.Self Employeed"] <- "Occupation.SelfEmployeed"
+names(train.dummy.scale)[names(train.dummy.scale) == "Educational.Qualifications.Post Graduate"] <- "Educational.Qualifications.PostGraduate"
+
+
+NN_1_5 <- neuralnet(Output ~. , train.dummy.scale, linear.output = FALSE, hidden = 5)
+
+#head(prediction(NN_1_5))
+plot(NN_1_5)
+```
+
+```{r}
+library(caret)
+nn1.predict.valid <-  neuralnet::compute(NN_1_5, valid.dummy.scale[,-37])
+predicted.class=apply(nn1.predict.valid$net.result,1,which.max)-1
+
+confusionMatrix(as.factor(predicted.class), valid.dummy.scale$Output, positive = "1")
+```
+
+```{r}
+nn1.predict.test <-  neuralnet::compute(NN_1_5, test.dummy.scale[,-37])
+predicted.class=apply(nn1.predict.test$net.result,1,which.max)-1
+#str(test.dummy.scale)
+
+confusionMatrix(as.factor(predicted.class), test.dummy.scale$Output, positive = "1")
+```
+#### 5 lalyers 5 nodes
+
+```{r}
+set.seed(1)
+
+names(train.dummy.scale)[names(train.dummy.scale) == "Occupation.Self Employeed"] <- "Occupation.SelfEmployeed"
+names(train.dummy.scale)[names(train.dummy.scale) == "Educational.Qualifications.Post Graduate"] <- "Educational.Qualifications.PostGraduate"
+
+
+NN_5_5 <- neuralnet(Output ~. , train.dummy.scale, linear.output = FALSE, hidden = c(5,5,5,5,5))
+
+#head(prediction(NN_1_2))
+plot(NN_5_5)
+```
+
+```{r}
+library(caret)
+nn1.predict.valid <-  neuralnet::compute(NN_5_5, valid.dummy.scale[,-37])
+predicted.class=apply(nn1.predict.valid$net.result,1,which.max)-1
+
+confusionMatrix(as.factor(predicted.class), valid.dummy.scale$Output, positive = "1")
+```
+
+```{r}
+nn1.predict.test <-  neuralnet::compute(NN_5_5, test.dummy.scale[,-37])
+predicted.class=apply(nn1.predict.test$net.result,1,which.max)-1
+#str(test.dummy.scale)
+confusionMatrix(as.factor(predicted.class), test.dummy.scale$Output, positive = "1")
+```
 
 ## Classification Tree
 
