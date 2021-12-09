@@ -459,3 +459,112 @@ rf_valid.cm = confusionMatrix(as.factor(pred), test$Output, positive = "1")
 
 rf_valid.cm
 ```
+
+
+## Naive Bayes
+
+```{r}
+library(e1071)
+
+naivebayes <- naiveBayes(Output ~., data=train)
+#naivebayes
+pred_valid.nb <- predict(naivebayes, newdata = valid)
+pred_test.nb <- predict(naivebayes, newdata = test)
+
+confusionMatrix(pred_valid.nb, valid$Output, positive = "1")$byClass["Balanced Accuracy"]
+confusionMatrix(pred_test.nb, test$Output,positive = "1")$byClass["Balanced Accuracy"]
+confusionMatrix(pred_valid.nb, valid$Output, positive = "1")$byClass["F1"]
+confusionMatrix(pred_test.nb, test$Output, positive = "1")$byClass["F1"]
+```
+
+## Logistic Regression
+
+```{r}
+log.reg <- glm(Output ~ ., data = train, family = "binomial")
+options(scipen=999)
+summary(log.reg)
+pred_valid.log <- predict(log.reg, valid, type = "response")
+pred_test.log <- predict(log.reg, test, type = "response")
+
+confusionMatrix(as.factor(ifelse(pred_valid.log > 0.5, 1, 0)), valid$Output, positive = "1")$byClass["Balanced Accuracy"]
+confusionMatrix(as.factor(ifelse(pred_test.log > 0.5, 1, 0)), test$Output, positive = "1")$byClass["Balanced Accuracy"]
+confusionMatrix(as.factor(ifelse(pred_valid.log > 0.5, 1, 0)), valid$Output, positive = "1")$byClass["F1"]
+confusionMatrix(as.factor(ifelse(pred_test.log > 0.5, 1, 0)), test$Output, positive = "1")$byClass["F1"]
+```
+
+## KNN
+
+```{r}
+train.st <- train.dummy
+valid.st <- valid.dummy
+test.st <- test.dummy
+
+standard.values = preProcess(train.dummy[,-c(2:6,8:11,37)], method=c("center", "scale"))
+train.st[,-c(2:6,8:11,37)] <- predict(standard.values, train.dummy[,-c(2:6,8:11,37)])
+valid.st[,-c(2:6,8:11,37)] <- predict(standard.values, valid.dummy[,-c(2:6,8:11,37)])
+test.st[,-c(2:6,8:11,37)] <- predict(standard.values, test.dummy[,-c(2:6,8:11,37)])
+
+str(train.st)
+```
+
+```{r}
+library(FNN)
+
+metrics <- data.frame(k=seq(1, 30, 1), balanced_accuracy = rep(0, 30), F1_score = rep(0, 30))
+
+for(i in 1:30) {
+  knn <- knn(train=train.st[,-37], test=valid.st[,-37], cl=train.st[,37], k=i)
+  metrics[i, 2] = confusionMatrix(knn, valid.st[,37], positive = "1")$byClass["Balanced Accuracy"]
+  metrics[i, 3] = confusionMatrix(knn, valid.st[,37], positive = "1")$byClass["F1"]
+}
+
+library(ggplot2)
+ggplot(data= metrics)+ 
+  geom_line(aes(x=k, y=balanced_accuracy))+
+  theme_bw()
+ggplot(data= metrics)+ 
+  geom_line(aes(x=k, y=F1_score))+
+  theme_bw()
+
+which.max(metrics$balanced_accuracy)
+which.max(metrics$F1_score)
+```
+
+```{r}
+knn1 <- knn(train=train.st[,-37], test=valid.st[,-37], cl=train.st[,37], k=1)
+knn10 <- knn(train=train.st[,-37], test=valid.st[,-37], cl=train.st[,37], k=10)
+
+knn1.test <- knn(train=train.st[,-37], test=test.st[,-37], cl=train.st[,37], k=1)
+knn10.test <- knn(train=train.st[,-37], test=test.st[,-37], cl=train.st[,37], k=10)
+
+knn1.acc <- data.frame(df=c("valid","test"))
+knn1.acc$Balanced_Accuracy <- c(confusionMatrix(knn1, valid.st[,37], positive = "1")$byClass["Balanced Accuracy"], confusionMatrix(knn1.test, test.st[,37], positive = "1")$byClass["Balanced Accuracy"])
+knn1.acc$F1 <- c(confusionMatrix(knn1, valid.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn1.test, test.st[,37], positive = "1")$byClass["F1"])
+
+knn.acc <- data.frame(df=c("valid k=1","valid k=10","test k=1","test k=10"))
+knn.acc$Balanced_Accuracy <- c(confusionMatrix(knn1, valid.st[,37], positive = "1")$byClass["Balanced Accuracy"], confusionMatrix(knn10, valid.st[,37], positive = "1")$byClass["Balanced Accuracy"], confusionMatrix(knn1.test, test.st[,37], positive = "1")$byClass["Balanced Accuracy"], confusionMatrix(knn10.test, test.st[,37], positive = "1")$byClass["Balanced Accuracy"])
+knn.acc$F1 <- c(confusionMatrix(knn1, valid.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn10, valid.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn1.test, test.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn10.test, test.st[,37], positive = "1")$byClass["F1"])
+
+library(reshape)
+knn.melt <- melt(knn.acc, id="df")
+
+ggplot(data=knn.melt, aes(x=df, y=value, colour=variable))+
+  geom_col(position="dodge", fill="grey96")+
+  theme_bw()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
