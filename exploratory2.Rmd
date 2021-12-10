@@ -9,9 +9,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ```{r}
-#df <- read.csv(file = "C:/Users/leomi/Downloads/Data-mining/Project_CVTDM/onlinedeliverydata.csv", header = T, sep = ",")
-setwd("C:/Users/andre/Desktop/Creating Value Project")
-df <- read.csv("onlinedeliverydata.csv", header = TRUE, sep = ",")
+df <- read.csv(file = "C:/Users/leomi/Downloads/Data-mining/Project_CVTDM/onlinedeliverydata.csv", header = T, sep = ",")
+#setwd("C:/Users/andre/Desktop/Creating Value Project")
+#df <- read.csv("onlinedeliverydata.csv", header = TRUE, sep = ",")
 df <- df[,-c(8,9,10)]
 str(df)
 attach(df)
