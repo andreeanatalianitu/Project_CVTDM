@@ -8,9 +8,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-df <- read.csv(file = "C:/Users/leomi/Downloads/Data-mining/Project_CVTDM/onlinedeliverydata.csv", header = T, sep = ",")
-#setwd("C:/Users/andre/Desktop/Creating Value Project")
-#df <- read.csv("onlinedeliverydata.csv", header = TRUE, sep = ",")
+#df <- read.csv(file = "C:/Users/leomi/Downloads/Data-mining/Project_CVTDM/onlinedeliverydata.csv", header = T, sep = ",")
+setwd("C:/Users/andre/Desktop/Creating Value Project")
+df <- read.csv("onlinedeliverydata.csv", header = TRUE, sep = ",")
 df <- df[,-c(8,9,10)]
 str(df)
 attach(df)
@@ -468,10 +468,10 @@ train.st <- train.dummy
 valid.st <- valid.dummy
 test.st <- test.dummy
 
-standard.values = preProcess(train.dummy[,-c(2:6,8:11,37)], method=c("center", "scale"))
-train.st[,-c(2:6,8:11,37)] <- predict(standard.values, train.dummy[,-c(2:6,8:11,37)])
-valid.st[,-c(2:6,8:11,37)] <- predict(standard.values, valid.dummy[,-c(2:6,8:11,37)])
-test.st[,-c(2:6,8:11,37)] <- predict(standard.values, test.dummy[,-c(2:6,8:11,37)])
+standard.values = preProcess(train.dummy[,c(1:12)], method=c("center", "scale"))
+train.st[,c(1:12)] <- predict(standard.values, train.dummy[,c(1:12)])
+valid.st[,c(1:12)] <- predict(standard.values, valid.dummy[,c(1:12)])
+test.st[,c(1:12)] <- predict(standard.values, test.dummy[,c(1:12)])
 
 str(train.st)
 ```
@@ -482,9 +482,9 @@ library(FNN)
 metrics <- data.frame(k=seq(1, 30, 1), balanced_accuracy = rep(0, 30), F1_score = rep(0, 30))
 
 for(i in 1:30) {
-  knn <- knn(train=train.st[,-37], test=valid.st[,-37], cl=train.st[,37], k=i)
-  metrics[i, 2] = confusionMatrix(knn, valid.st[,37], positive = "1")$byClass["F1"]
-  metrics[i, 3] = confusionMatrix(knn, valid.st[,37], positive = "1")$byClass["F1"]
+  knn <- knn(train=train.st[,-16], test=valid.st[,-16], cl=train.st[,16], k=i)
+  metrics[i, 2] = confusionMatrix(knn, valid.st[,16], positive = "1")$byClass["Balanced Accuracy"]
+  metrics[i, 3] = confusionMatrix(knn, valid.st[,16], positive = "1")$byClass["F1"]
 }
 
 library(ggplot2)
@@ -500,46 +500,32 @@ which.max(metrics$F1_score)
 ```
 
 ```{r}
-knn1 <- knn(train=train.st[,-37], test=valid.st[,-37], cl=train.st[,37], k=1)
-knn10 <- knn(train=train.st[,-37], test=valid.st[,-37], cl=train.st[,37], k=10)
+knn1 <- knn(train=train.st[,-16], test=valid.st[,-16], cl=train.st[,16], k=1)
+knn1.test <- knn(train=train.st[,-16], test=test.st[,-16], cl=train.st[,16], k=1)
 
-knn1.test <- knn(train=train.st[,-37], test=test.st[,-37], cl=train.st[,37], k=1)
-knn10.test <- knn(train=train.st[,-37], test=test.st[,-37], cl=train.st[,37], k=10)
-
-knn1.acc <- data.frame(df=c("valid","test"))
-knn1.acc$Balanced_Accuracy <- c(confusionMatrix(knn1, valid.st[,37], positive = "1")$byClass["Balanced Accuracy"], confusionMatrix(knn1.test, test.st[,37], positive = "1")$byClass["Balanced Accuracy"])
-knn1.acc$F1 <- c(confusionMatrix(knn1, valid.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn1.test, test.st[,37], positive = "1")$byClass["F1"])
-
-knn.acc <- data.frame(df=c("valid k=1","valid k=10","test k=1","test k=10"))
-knn.acc$Balanced_Accuracy <- c(confusionMatrix(knn1, valid.st[,37], positive = "1")$byClass["Balanced Accuracy"], confusionMatrix(knn10, valid.st[,37], positive = "1")$byClass["Balanced Accuracy"], confusionMatrix(knn1.test, test.st[,37], positive = "1")$byClass["Balanced Accuracy"], confusionMatrix(knn10.test, test.st[,37], positive = "1")$byClass["Balanced Accuracy"])
-knn.acc$F1 <- c(confusionMatrix(knn1, valid.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn10, valid.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn1.test, test.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn10.test, test.st[,37], positive = "1")$byClass["F1"])
-
-library(reshape)
-knn.melt <- melt(knn.acc, id="df")
-
-ggplot(data=knn.melt, aes(x=df, y=value, colour=variable))+
-  geom_col(position="dodge", fill="grey96")+
-  theme_bw()
+confusionMatrix(knn1, valid.st[,16], positive = "1")$byClass["Balanced Accuracy"]
+confusionMatrix(knn1.test, test.st[,16], positive = "1")$byClass["Balanced Accuracy"]
+confusionMatrix(knn1, valid.st[,16], positive = "1")$byClass["F1"]
+confusionMatrix(knn1.test, test.st[,16], positive = "1")$byClass["F1"]
 ```
 
 ## Comparison of the methods
 
-
 ```{r}
 F1 <- data.frame("model" = c("naive bayes","logistic regression","discriminant analysis","k-NN","neural nets", "classification tree","boosted", "bagged", "random"),
                                 
-"valid"=c(nb.valid.balanced.acc, lr.valid.balanced.acc, cm.da.valid$byClass["F1"], confusionMatrix(knn10, valid.st[,16], positive = "1")$byClass["F1"] , cm.nn1.valid$byClass["F1"], CT_cm_valid$byClass["F1"], boost_valid.cm$byClass["F1"], bag_valid.cm$byClass["F1"], rf_valid.cm$byClass["F1"]),
+"valid"=c(nb.valid.balanced.acc, lr.valid.balanced.acc, cm.da.valid$byClass["F1"], confusionMatrix(knn1, valid.st[,16], positive = "1")$byClass["F1"] , cm.nn1.valid$byClass["F1"], CT_cm_valid$byClass["F1"], boost_valid.cm$byClass["F1"], bag_valid.cm$byClass["F1"], rf_valid.cm$byClass["F1"]),
 
-"test"=c(nb.test.balanced.acc, lr.test.balanced.acc, cm.da.test$byClass["F1"], confusionMatrix(knn10.test, test.st[,16], positive = "1")$byClass["F1"], cm.nn1.test$byClass["F1"], CT_cm_test$byClass["F1"], boost_test.cm$byClass["F1"], bag_test.cm$byClass["F1"], rf_test.cm$byClass["F1"]))
+"test"=c(nb.test.balanced.acc, lr.test.balanced.acc, cm.da.test$byClass["F1"], confusionMatrix(knn1.test, test.st[,16], positive = "1")$byClass["F1"], cm.nn1.test$byClass["F1"], CT_cm_test$byClass["F1"], boost_test.cm$byClass["F1"], bag_test.cm$byClass["F1"], rf_test.cm$byClass["F1"]))
 F1
 ```
 
 ```{r}
 balanced_accuracy <- data.frame("model" = c("naive bayes","logistic regression","discriminant analysis","k-NN","neural nets", "classification tree","boosted", "bagged", "random"),
                                 
-"valid"=c(nb.valid.balanced.acc, lr.valid.balanced.acc, cm.da.valid$byClass["Balanced Accuracy"], confusionMatrix(knn10, valid.st[,16], positive = "1")$byClass["Balanced Accuracy"] , cm.nn1.valid$byClass["Balanced Accuracy"], CT_cm_valid$byClass["Balanced Accuracy"], boost_valid.cm$byClass["Balanced Accuracy"], bag_valid.cm$byClass["Balanced Accuracy"], rf_valid.cm$byClass["Balanced Accuracy"]),
+"valid"=c(nb.valid.balanced.acc, lr.valid.balanced.acc, cm.da.valid$byClass["Balanced Accuracy"], confusionMatrix(knn1, valid.st[,16], positive = "1")$byClass["Balanced Accuracy"] , cm.nn1.valid$byClass["Balanced Accuracy"], CT_cm_valid$byClass["Balanced Accuracy"], boost_valid.cm$byClass["Balanced Accuracy"], bag_valid.cm$byClass["Balanced Accuracy"], rf_valid.cm$byClass["Balanced Accuracy"]),
 
-"test"=c(nb.test.balanced.acc, lr.test.balanced.acc, cm.da.test$byClass["Balanced Accuracy"], confusionMatrix(knn10.test, test.st[,16], positive = "1")$byClass["Balanced Accuracy"], cm.nn1.test$byClass["Balanced Accuracy"], CT_cm_test$byClass["Balanced Accuracy"], boost_test.cm$byClass["Balanced Accuracy"], bag_test.cm$byClass["Balanced Accuracy"], rf_test.cm$byClass["Balanced Accuracy"]))
+"test"=c(nb.test.balanced.acc, lr.test.balanced.acc, cm.da.test$byClass["Balanced Accuracy"], confusionMatrix(knn1.test, test.st[,16], positive = "1")$byClass["Balanced Accuracy"], cm.nn1.test$byClass["Balanced Accuracy"], CT_cm_test$byClass["Balanced Accuracy"], boost_test.cm$byClass["Balanced Accuracy"], bag_test.cm$byClass["Balanced Accuracy"], rf_test.cm$byClass["Balanced Accuracy"]))
 balanced_accuracy
 ```
 
