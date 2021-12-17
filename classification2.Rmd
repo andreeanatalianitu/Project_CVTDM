@@ -627,21 +627,21 @@ F1 <- data.frame("model" = c("naive bayes","logistic regression","discriminant a
 F1
 ```
 
-```{r}
+```{r fig.height=4, fig.width=7}
 acc_melt <- melt(balanced_accuracy, id="model")
 ggplot(data=acc_melt, aes(x=reorder(model, -value), y=value, colour=variable))+
   geom_col(position="dodge", fill="grey96")+
-  geom_text(aes(label=round(value,3)), vjust=-0.4, position=position_dodge(width=1), cex=2.1)+
+  geom_text(aes(label=round(value,3)), vjust=-0.4, position=position_dodge(width=1), cex=2.5)+
   theme_bw()+
   theme(axis.text.x=element_text(angle=60, vjust=0.6))+
   labs(x="Model", title="Balanced accuracy for each method")
 ```
 
-```{r}
+```{r fig.height=4, fig.width=7}
 f1_melt <- melt(F1, id="model")
 ggplot(data=f1_melt, aes(x=reorder(model, -value), y=value, colour=variable))+
   geom_col(position="dodge", fill="grey96")+
-  geom_text(aes(label=round(value,3)), vjust=-0.4, position=position_dodge(width=1), cex=2.1)+
+  geom_text(aes(label=round(value,3)), vjust=-0.4, position=position_dodge(width=1), cex=2.5)+
   theme_bw()+
   theme(axis.text.x=element_text(angle=60, vjust=0.6))+
   labs(x="Model", title="F1 for each method")
