@@ -1,203 +1,99 @@
-levels(df[,2])
-df1$Gender <- recode(df1$Gender, "Female"=1, "Male"=0)
-gg_miss_var(df1[,1:2], show_pct = TRUE)
-df1=df1[,-c(8:13)]
-str(df1)
-df2 = df1[,c(8,	9,	12,	10,	21,	11,	1	,30	,17,	14,	13,	39,	4,45)]
-str(df2)
-df2$Occupation=as.factor(df2$Occupation)
-library(caret)
-dummies=dummyVars(~., data=df2)
-df.dummy=as.data.frame(predict(dummies, newdata=df2))
-df.dummy=df.dummy[,-14]
-str(df.dummy)
-df.dummy$Output <- as.factor(df.dummy$Output)
-df2$Output <- as.factor(df2$Output)
-library(caret)
-set.seed(1)
-train_rows <- createDataPartition(df2$Output, p = .5, list = FALSE)
-train <- df2[train_rows,]
-valid_test <- df2[-train_rows,]
-set.seed(1)
-valid_rows <- createDataPartition(valid_test$Output, p = .6, list = FALSE)
-valid <- valid_test[valid_rows,]
-test <- valid_test[-valid_rows,]
-set.seed(1)
-train_rows1 <- createDataPartition(df.dummy$Output, p = .5, list = FALSE)
-train.dummy <- df.dummy[train_rows1,]
-valid_test.dummy <- df.dummy[-train_rows1,]
-set.seed(1)
-valid_rows1 <- createDataPartition(valid_test.dummy$Output, p = .6, list = FALSE)
-valid.dummy <- valid_test.dummy[valid_rows1,]
-test.dummy <- valid_test.dummy[-valid_rows1,]
-print(table(train$Output) / table(df2$Output)) #Training set partition
-print(table(valid$Output) / table(df2$Output)) #Validation set partition
-print(table(test$Output) / table(df2$Output)) #Test set partition
-library(MASS)
-library(DiscriMiner)
-#da1.reg <- linDA(train[,1:30], train[,31])
-#da1.reg
-#View(train)
-model1 <- lda(Output~., data = train)
-model1
-pred.valid=predict(model1,valid[,-31])
-cm.da.valid=confusionMatrix(as.factor(pred.valid$class),as.factor(valid$Output) ,positive = "1")
-cm.da.valid
-fourfoldplot(cm.da.valid$table)
-da.pred.test=predict(model1,test[,-31])
-cm.da.test=confusionMatrix(as.factor(da.pred.test$class),as.factor(test$Output) ,positive = "1")
-cm.da.test
-fourfoldplot(cm.da.test$table)
-library(neuralnet)
-library(caret)
-library(nnet)
-library(NeuralNetTools)
-library(boot)
-library(plyr)
-library(ggplot2)
-library(reshape)
-train.dummy.scale=train.dummy
-valid.dummy.scale=valid.dummy
-test.dummy.scale=test.dummy
-vars = c(1,7,12:36)
-norm.values <- preProcess(train.dummy[, vars], method="range")
-str(df.dummy)
-train.st <- train.dummy
-valid.st <- valid.dummy
-test.st <- test.dummy
-standard.values = preProcess(train.dummy[,c(1:12)], method=c("center", "scale"))
-train.st[,c(1:12)] <- predict(standard.values, train.dummy[,c(1:12)])
-valid.st[,c(1:12)] <- predict(standard.values, valid.dummy[,c(1:12)])
-test.st[,c(1:12)] <- predict(standard.values, test.dummy[,c(1:12)])
-str(train.st)
-View(test.st)
-library(FNN)
-metrics <- data.frame(k=seq(1, 30, 1), balanced_accuracy = rep(0, 30), F1_score = rep(0, 30))
-for(i in 1:30) {
-knn <- knn(train=train.st[,-37], test=valid.st[,-37], cl=train.st[,37], k=i)
-metrics[i, 2] = confusionMatrix(knn, valid.st[,37], positive = "1")$byClass["F1"]
-metrics[i, 3] = confusionMatrix(knn, valid.st[,37], positive = "1")$byClass["F1"]
-}
-library(FNN)
-metrics <- data.frame(k=seq(1, 30, 1), balanced_accuracy = rep(0, 30), F1_score = rep(0, 30))
-for(i in 1:30) {
-knn <- knn(train=train.st[,-16], test=valid.st[,-16], cl=train.st[,16], k=i)
-metrics[i, 2] = confusionMatrix(knn, valid.st[,37], positive = "1")$byClass["F1"]
-metrics[i, 3] = confusionMatrix(knn, valid.st[,37], positive = "1")$byClass["F1"]
-}
-library(FNN)
-metrics <- data.frame(k=seq(1, 30, 1), balanced_accuracy = rep(0, 30), F1_score = rep(0, 30))
-for(i in 1:30) {
-knn <- knn(train=train.st[,-16], test=valid.st[,-16], cl=train.st[,16], k=i)
-metrics[i, 2] = confusionMatrix(knn, valid.st[,16], positive = "1")$byClass["F1"]
-metrics[i, 3] = confusionMatrix(knn, valid.st[,16], positive = "1")$byClass["F1"]
-}
-library(ggplot2)
-ggplot(data= metrics)+
-geom_line(aes(x=k, y=balanced_accuracy))+
-theme_bw()
-ggplot(data= metrics)+
-geom_line(aes(x=k, y=F1_score))+
-theme_bw()
-which.max(metrics$balanced_accuracy)
-which.max(metrics$F1_score)
-knn1 <- knn(train=train.st[,-37], test=valid.st[,-37], cl=train.st[,37], k=1)
-knn1 <- knn(train=train.st[,-16], test=valid.st[,-16], cl=train.st[,16], k=1)
-#knn10 <- knn(train=train.st[,-37], test=valid.st[,-37], cl=train.st[,37], k=10)
-knn1.test <- knn(train=train.st[,-16], test=test.st[,-16], cl=train.st[,16], k=1)
-#knn10.test <- knn(train=train.st[,-37], test=test.st[,-37], cl=train.st[,37], k=10)
-knn1.acc <- data.frame(df=c("valid","test"))
-knn1.acc$Balanced_Accuracy <- c(confusionMatrix(knn1, valid.st[,16], positive = "1")$byClass["F1"], confusionMatrix(knn1.test, test.st[,16], positive = "1")$byClass["F1"])
-knn1.acc$F1 <- c(confusionMatrix(knn1, valid.st[,16], positive = "1")$byClass["F1"], confusionMatrix(knn1.test, test.st[,16], positive = "1")$byClass["F1"])
-# knn.acc <- data.frame(df=c("valid k=1","valid k=10","test k=1","test k=10"))
-# knn.acc$Balanced_Accuracy <- c(confusionMatrix(knn1, valid.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn10, valid.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn1.test, test.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn10.test, test.st[,37], positive = "1")$byClass["F1"])
-# knn.acc$F1 <- c(confusionMatrix(knn1, valid.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn10, valid.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn1.test, test.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn10.test, test.st[,37], positive = "1")$byClass["F1"])
-library(reshape)
-knn.melt <- melt(knn1.acc, id="df")
-ggplot(data=knn.melt, aes(x=df, y=value, colour=variable))+
-geom_col(position="dodge", fill="grey96")+
-theme_bw()
-View(knn1.acc)
-library(FNN)
-metrics <- data.frame(k=seq(1, 30, 1), balanced_accuracy = rep(0, 30), F1_score = rep(0, 30))
-for(i in 1:30) {
-knn <- knn(train=train.st[,-16], test=valid.st[,-16], cl=train.st[,16], k=i)
-metrics[i, 2] = confusionMatrix(knn, valid.st[,16], positive = "1")$byClass["Balanced Accuracy"]
-metrics[i, 3] = confusionMatrix(knn, valid.st[,16], positive = "1")$byClass["F1"]
-}
-library(ggplot2)
-ggplot(data= metrics)+
-geom_line(aes(x=k, y=balanced_accuracy))+
-theme_bw()
-ggplot(data= metrics)+
-geom_line(aes(x=k, y=F1_score))+
-theme_bw()
-which.max(metrics$balanced_accuracy)
-which.max(metrics$F1_score)
-knn1 <- knn(train=train.st[,-16], test=valid.st[,-16], cl=train.st[,16], k=1)
-#knn10 <- knn(train=train.st[,-37], test=valid.st[,-37], cl=train.st[,37], k=10)
-knn1.test <- knn(train=train.st[,-16], test=test.st[,-16], cl=train.st[,16], k=1)
-#knn10.test <- knn(train=train.st[,-37], test=test.st[,-37], cl=train.st[,37], k=10)
-knn1.acc <- data.frame(df=c("valid","test"))
-knn1.acc$Balanced_Accuracy <- c(confusionMatrix(knn1, valid.st[,16], positive = "1")$byClass["Balanced Accuracy"], confusionMatrix(knn1.test, test.st[,16], positive = "1")$byClass["Balanced Accuracy"])
-knn1.acc$F1 <- c(confusionMatrix(knn1, valid.st[,16], positive = "1")$byClass["F1"], confusionMatrix(knn1.test, test.st[,16], positive = "1")$byClass["F1"])
-# knn.acc <- data.frame(df=c("valid k=1","valid k=10","test k=1","test k=10"))
-# knn.acc$Balanced_Accuracy <- c(confusionMatrix(knn1, valid.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn10, valid.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn1.test, test.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn10.test, test.st[,37], positive = "1")$byClass["F1"])
-# knn.acc$F1 <- c(confusionMatrix(knn1, valid.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn10, valid.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn1.test, test.st[,37], positive = "1")$byClass["F1"], confusionMatrix(knn10.test, test.st[,37], positive = "1")$byClass["F1"])
-library(reshape)
-knn.melt <- melt(knn1.acc, id="df")
-ggplot(data=knn.melt, aes(x=df, y=value, colour=variable))+
-geom_col(position="dodge", fill="grey96")+
-theme_bw()
-View(knn1.acc)
-View(df.dummy)
+---
+title: "Project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
 #df <- read.csv(file = "C:/Users/leomi/Downloads/Data-mining/Project_CVTDM/onlinedeliverydata.csv", header = T, sep = ",")
 setwd("C:/Users/andre/Desktop/Creating Value Project")
 df <- read.csv("onlinedeliverydata.csv", header = TRUE, sep = ",")
 df <- df[,-c(8,9,10)]
 str(df)
 attach(df)
+```
+
+## Recoding variables
+
+```{r message=FALSE, warning=FALSE}
 library(dplyr)
+
 df1 <- df[,-52]
+
 for (i in c(14:33,37:41)) {
-df1[,i] <- recode(df1[,i], "Strongly Agree"=5, "Agree"=4,"Neutral"=3,"Disagree"=2,"Strongly Disagree"=1)
+  df1[,i] <- recode(df1[,i], "Strongly Agree"=5, "Agree"=4,"Neutral"=3,"Disagree"=2,"Strongly Disagree"=1)
 }
+
 library(naniar)
 gg_miss_var(df1[,c(14:33,37:41)], show_pct = TRUE)
+
 levels(df[,51])
 df1$Output <- recode(df1$Output, "Yes"=1, "No"=0)
 gg_miss_var(df[,50:51], show_pct = TRUE)
+
 levels(as.factor(df1[,5]))
 df1$Monthly.Income=recode(df$Monthly.Income, "10001 to 25000"=17500.5, "25001 to 50000"=37500, "Below Rs.10000" = 10000, "More than 50000"=50000, "No Income"=0 )
+
 levels(df[,43])
 str(df[,43:50])
+
 for (i in c(43:50)) {
-df1[,i] <- recode(df1[,i], "Important"=4, "Moderately Important"=3, "Slightly Important"=2, "Unimportant"=1, "Very Important"=5)
+  df1[,i] <- recode(df1[,i], "Important"=4, "Moderately Important"=3, "Slightly Important"=2, "Unimportant"=1, "Very Important"=5)
 }
 gg_miss_var(df1[,43:50], show_pct = TRUE)
+
 levels(df[,34])
 str(df[,c(34,42)])
 for (i in c(34,42)) {
-df1[,i] <- recode(df1[,i], "Maybe"=2, "No"=1, "Yes"=3)
+  df1[,i] <- recode(df1[,i], "Maybe"=2, "No"=1, "Yes"=3)
 }
 gg_miss_var(df1[,c(34,42)], show_pct = TRUE)
+
 levels(df[,2])
 df1$Gender <- recode(df1$Gender, "Female"=1, "Male"=0)
 gg_miss_var(df1[,1:2], show_pct = TRUE)
+
+
+
 df1=df1[,-c(8:13)]
 str(df1)
+```
+
+## Data frames
+
+```{r message=FALSE, warning=FALSE}
 df2 = df1[,c(8,	9,	12,	10,	21,	11,	1	,30	,17,	14,	13,	39,	4,45)]
+
 str(df2)
+```
+
+## Dummies
+
+```{r message=FALSE, warning=FALSE}
 df2$Occupation=as.factor(df2$Occupation)
+
 library(caret)
 dummies=dummyVars(~., data=df2)
 df.dummy=as.data.frame(predict(dummies, newdata=df2))
+
+
 df.dummy=df.dummy[,-14]
 str(df.dummy)
+```
+
+```{r message=FALSE, warning=FALSE}
 df.dummy$Output <- as.factor(df.dummy$Output)
 df2$Output <- as.factor(df2$Output)
+```
+
+## Partitioning
+
+```{r message=FALSE, warning=FALSE}
 library(caret)
+
 set.seed(1)
 train_rows <- createDataPartition(df2$Output, p = .5, list = FALSE)
 train <- df2[train_rows,]
@@ -206,6 +102,9 @@ set.seed(1)
 valid_rows <- createDataPartition(valid_test$Output, p = .6, list = FALSE)
 valid <- valid_test[valid_rows,]
 test <- valid_test[-valid_rows,]
+```
+
+```{r message=FALSE, warning=FALSE}
 set.seed(1)
 train_rows1 <- createDataPartition(df.dummy$Output, p = .5, list = FALSE)
 train.dummy <- df.dummy[train_rows1,]
@@ -214,24 +113,60 @@ set.seed(1)
 valid_rows1 <- createDataPartition(valid_test.dummy$Output, p = .6, list = FALSE)
 valid.dummy <- valid_test.dummy[valid_rows1,]
 test.dummy <- valid_test.dummy[-valid_rows1,]
+```
+
+
+```{r message=FALSE, warning=FALSE}
 print(table(train$Output) / table(df2$Output)) #Training set partition
 print(table(valid$Output) / table(df2$Output)) #Validation set partition
 print(table(test$Output) / table(df2$Output)) #Test set partition
+```
+
+## Discriminant analysis
+
+```{r message=FALSE, warning=FALSE}
 library(MASS)
 library(DiscriMiner)
+```
+
+
+```{r}
 #da1.reg <- linDA(train[,1:30], train[,31])
 #da1.reg
 #View(train)
+```
+
+```{r}
 model1 <- lda(Output~., data = train)
 model1
+```
+
+
+```{r}
 pred.valid=predict(model1,valid[,-31])
+
 cm.da.valid=confusionMatrix(as.factor(pred.valid$class),as.factor(valid$Output) ,positive = "1")
 cm.da.valid
+```
+
+```{r}
 fourfoldplot(cm.da.valid$table)
+```
+
+```{r}
 da.pred.test=predict(model1,test[,-31])
+
 cm.da.test=confusionMatrix(as.factor(da.pred.test$class),as.factor(test$Output) ,positive = "1")
 cm.da.test
+```
+
+```{r}
 fourfoldplot(cm.da.test$table)
+```
+
+## Neural Nets
+
+```{r message=FALSE, warning=FALSE}
 library(neuralnet)
 library(caret)
 library(nnet)
@@ -240,35 +175,61 @@ library(boot)
 library(plyr)
 library(ggplot2)
 library(reshape)
+```
+
+
+```{r message=FALSE, warning=FALSE}
 train.dummy.scale=train.dummy
 valid.dummy.scale=valid.dummy
 test.dummy.scale=test.dummy
+
 vars = c(1:12)
-norm.values <- preProcess(train.dummy[, vars], method="range")
+norm.values <- preProcess(train.dummy[, vars], method="range") 
+
 train.dummy.scale[,vars] = predict(norm.values, train.dummy[,vars])
 valid.dummy.scale[,vars] = predict(norm.values, valid.dummy[,vars])
 test.dummy.scale[,vars] = predict(norm.values, test.dummy[,vars])
+
 scale_back_min_max_score <- function(x_) {
-min_x = min(train.dummy$Output)
-max_x = max(train.dummy$Output)
-x = sapply(x_, function(x__) x__*(max_x - min_x) + min_x)
-return(x)
+  min_x = min(train.dummy$Output)
+  max_x = max(train.dummy$Output)
+  x = sapply(x_, function(x__) x__*(max_x - min_x) + min_x)
+  return(x)
 }
+```
+
+#### 4 layers 7 nodes
+```{r message=FALSE, warning=FALSE}
 set.seed(1)
+
 names(train.dummy.scale)[names(train.dummy.scale) == "Occupation.Self Employeed"] <- "Occupation.SelfEmployeed"
+
 NN_4_7 <- neuralnet(Output ~. , train.dummy.scale, linear.output = FALSE, hidden = c(7,7,7,7))
+
 #head(prediction(NN_1_5))
 #plot(NN_1_5)
+
 library(caret)
 nn1.predict.valid <-  neuralnet::compute(NN_4_7, valid.dummy.scale[,-16])
 predicted.class=apply(nn1.predict.valid$net.result,1,which.max)-1
+
 cm.nn1.valid=confusionMatrix(as.factor(predicted.class), valid.dummy.scale$Output, positive = "1")
+
 nn1.predict.test <-  neuralnet::compute(NN_4_7, test.dummy.scale[,-16])
 predicted.class=apply(nn1.predict.test$net.result,1,which.max)-1
 #str(test.dummy.scale)
+
 cm.nn1.test=confusionMatrix(as.factor(predicted.class), test.dummy.scale$Output, positive = "1")
+
 cm.nn1.valid
 cm.nn1.test
+```
+
+
+## Classification Tree
+
+#### Full-grown tree
+```{r message=FALSE, warning=FALSE}
 library(forecast)
 library(caret)
 library(Metrics)
@@ -276,53 +237,122 @@ library(dplyr)
 library(reshape2)
 library(scales)
 library(rpart)
+
 set.seed(1)
 full_CT = rpart(Output ~ ., data = train, method = "class", cp=0, minbucket=1, minsplit = 1, xval =5)
 length(full_CT$frame$var[full_CT$frame$var == "<leaf>"])
-library(ggplot2)
+```
+
+```{r message=FALSE, warning=FALSE}
+library(ggplot2) 
 library(cowplot)
 library(rpart.plot)
+
+
 rpart.plot(full_CT, type = 1, extra = 1, under = TRUE, split.font = 1, varlen = -10)
+```
+
+```{r}
 row_minxerr=which.min(full_CT$cptable[,4])
 cp_minxerr=full_CT$cptable[row_minxerr,1]
 cp_minxerr
+```
+```{r}
 minxerr=full_CT$cptable[row_minxerr,4]
 xstd_minxerr=full_CT$cptable[row_minxerr,5]
 cp_best_pruned_CT=minxerr+xstd_minxerr
 cp_best_pruned_CT
+```
+```{r}
 printcp(full_CT)[,4]
+```
+```{r}
 cp_xerr=full_CT$cptable[5,1]
 cp_xerr
-plotcp(full_CT) +
+```
+```{r}
+plotcp(full_CT) + 
 abline(v = row_minxerr, lty = "dashed")+
 abline(v = 5, lty = "dotted")
+```
+
+Let’s prune 2 classification trees: first one with CP of 1 split(which has the lowest cross-validation error) and second with CP of 7 splits(best-pruned classification tree)
+
+#### Pruned classification tree
+```{r}
 set.seed(1)
 pruned_CT <- prune(full_CT, cp = cp_minxerr)
 length(pruned_CT$frame$var[pruned_CT$frame$var == "<leaf>"])
+```
+```{r}
 rpart.plot(pruned_CT, type = 1, extra = 1, under = TRUE, split.font = 1, varlen = -10)
+```
+
+```{r}
 pred_valid_pruned_CT= predict(pruned_CT, valid, type="class")
+
 valid$Output=as.factor(valid$Output)
 CT_cm_valid=confusionMatrix(pred_valid_pruned_CT, valid$Output , positive = "1")
 CT_cm_valid
+```
+
+```{r}
 fourfoldplot(confusionMatrix(pred_valid_pruned_CT, valid$Output , positive = "1")$table)
+```
+
+
+```{r}
 pred_test_pruned_CT= predict(pruned_CT, test, type="class")
+
 test$Output=as.factor(test$Output)
 CT_cm_valid=confusionMatrix(pred_test_pruned_CT, test$Output , positive = "1")
 CT_cm_valid
+```
+
+```{r}
 fourfoldplot(confusionMatrix(pred_test_pruned_CT, test$Output , positive = "1")$table)
+```
+
+
+#### Best pruned classification tree
+
+```{r}
 best_pruned_CT <- prune(full_CT,cp = cp_xerr)
 length(best_pruned_CT$frame$var[best_pruned_CT$frame$var == "<leaf>"])
+```
+
+```{r}
 rpart.plot(best_pruned_CT, type = 1, extra = 1, under = TRUE, split.font = 1, varlen = -10)
+```
+
+```{r}
 pred_valid_best_pruned_CT= predict(best_pruned_CT, valid, type="class")
+
 valid$Output=as.factor(valid$Output)
 CT_cm_valid=confusionMatrix(pred_valid_best_pruned_CT, valid$Output , positive = "1")
 CT_cm_valid
+```
+
+```{r}
 fourfoldplot(confusionMatrix(pred_valid_best_pruned_CT, valid$Output , positive = "1")$table)
+```
+
+
+```{r}
 pred_test_best_pruned_CT= predict(best_pruned_CT, test, type="class")
+
 test$Output=as.factor(test$Output)
 CT_cm_test=confusionMatrix(pred_test_best_pruned_CT, test$Output , positive = "1")
 CT_cm_test
+```
+
+```{r}
 fourfoldplot(confusionMatrix(pred_test_best_pruned_CT, test$Output , positive = "1")$table)
+```
+
+## Boosted
+
+```{r message=FALSE, warning=FALSE}
 library(cowplot)
 library(caret)
 library(rpart)
@@ -330,95 +360,189 @@ library(gains)
 library(adabag)
 library(randomForest)
 library(reshape2)
+```
+
+
+```{r}
 set.seed(1)
 boost <- boosting(Output ~ ., data = train)
+```
+
+
+```{r}
 pred_boost_valid <- predict(boost, valid)
 boost_valid.cm = confusionMatrix(as.factor(pred_boost_valid$class), valid$Output, positive = "1")
+
 boost_valid.cm
+```
+
+```{r}
 pred_boost_test <- predict(boost, test)
 boost_test.cm = confusionMatrix(as.factor(pred_boost_test$class), (test$Output),positive = "1")
+
 boost_test.cm
+```
+
+## Bagged
+
+```{r}
 set.seed(1)
 bagt <- bagging(Output ~ ., data = train)
+```
+
+
+```{r}
 pred <- predict(bagt, valid)
 bag_valid.cm = confusionMatrix(as.factor(pred$class), valid$Output,positive = "1")
+
 bag_valid.cm
+```
+
+```{r}
 pred <- predict(bagt, test)
 bag_test.cm = confusionMatrix(as.factor(pred$class), test$Output,positive = "1")
+
 bag_test.cm
+```
+
+## Random
+
+```{r}
 set.seed(1)
 rf <- randomForest(Output ~ ., data = train, mtry=4, importance = T)
+```
+
+
+```{r}
 pred <- predict(rf, valid)
+
 rf_valid.cm = confusionMatrix(as.factor(pred), valid$Output,positive = "1")
+
 rf_valid.cm
+```
+
+```{r}
 pred <- predict(rf, test)
+
 rf_test.cm = confusionMatrix(as.factor(pred), test$Output, positive = "1")
+
 rf_test.cm
+```
+
+
+## Naive Bayes
+
+```{r message=FALSE, warning=FALSE}
 library(e1071)
+
 naivebayes <- naiveBayes(Output ~., data=train)
 #naivebayes
 pred_valid.nb <- predict(naivebayes, newdata = valid)
 pred_test.nb <- predict(naivebayes, newdata = test)
+
 nb.valid.balanced.acc=confusionMatrix(pred_valid.nb, valid$Output, positive = "1")$byClass["Balanced Accuracy"]
 nb.test.balanced.acc=confusionMatrix(pred_test.nb, test$Output,positive = "1")$byClass["Balanced Accuracy"]
 confusionMatrix(pred_valid.nb, valid$Output, positive = "1")$byClass["F1"]
 confusionMatrix(pred_test.nb, test$Output, positive = "1")$byClass["F1"]
+```
+
+## Logistic Regression
+
+```{r}
 log.reg <- glm(Output ~ ., data = train, family = "binomial")
 options(scipen=999)
 summary(log.reg)
 pred_valid.log <- predict(log.reg, valid, type = "response")
 pred_test.log <- predict(log.reg, test, type = "response")
+
 lr.valid.balanced.acc=confusionMatrix(as.factor(ifelse(pred_valid.log > 0.5, 1, 0)), valid$Output, positive = "1")$byClass["Balanced Accuracy"]
 lr.test.balanced.acc=confusionMatrix(as.factor(ifelse(pred_test.log > 0.5, 1, 0)), test$Output, positive = "1")$byClass["Balanced Accuracy"]
 confusionMatrix(as.factor(ifelse(pred_valid.log > 0.5, 1, 0)), valid$Output, positive = "1")$byClass["F1"]
 confusionMatrix(as.factor(ifelse(pred_test.log > 0.5, 1, 0)), test$Output, positive = "1")$byClass["F1"]
+```
+
+## KNN
+
+```{r}
 train.st <- train.dummy
 valid.st <- valid.dummy
 test.st <- test.dummy
+
 standard.values = preProcess(train.dummy[,c(1:12)], method=c("center", "scale"))
 train.st[,c(1:12)] <- predict(standard.values, train.dummy[,c(1:12)])
 valid.st[,c(1:12)] <- predict(standard.values, valid.dummy[,c(1:12)])
 test.st[,c(1:12)] <- predict(standard.values, test.dummy[,c(1:12)])
+
 str(train.st)
+```
+
+```{r message=FALSE, warning=FALSE}
 library(FNN)
+
 metrics <- data.frame(k=seq(1, 30, 1), balanced_accuracy = rep(0, 30), F1_score = rep(0, 30))
+
 for(i in 1:30) {
-knn <- knn(train=train.st[,-16], test=valid.st[,-16], cl=train.st[,16], k=i)
-metrics[i, 2] = confusionMatrix(knn, valid.st[,16], positive = "1")$byClass["Balanced Accuracy"]
-metrics[i, 3] = confusionMatrix(knn, valid.st[,16], positive = "1")$byClass["F1"]
+  knn <- knn(train=train.st[,-16], test=valid.st[,-16], cl=train.st[,16], k=i)
+  metrics[i, 2] = confusionMatrix(knn, valid.st[,16], positive = "1")$byClass["Balanced Accuracy"]
+  metrics[i, 3] = confusionMatrix(knn, valid.st[,16], positive = "1")$byClass["F1"]
 }
+
 library(ggplot2)
-ggplot(data= metrics)+
-geom_line(aes(x=k, y=balanced_accuracy))+
-theme_bw()
-ggplot(data= metrics)+
-geom_line(aes(x=k, y=F1_score))+
-theme_bw()
+ggplot(data= metrics)+ 
+  geom_line(aes(x=k, y=balanced_accuracy))+
+  theme_bw()
+ggplot(data= metrics)+ 
+  geom_line(aes(x=k, y=F1_score))+
+  theme_bw()
+
 which.max(metrics$balanced_accuracy)
 which.max(metrics$F1_score)
+```
+
+```{r}
 knn1 <- knn(train=train.st[,-16], test=valid.st[,-16], cl=train.st[,16], k=1)
 knn1.test <- knn(train=train.st[,-16], test=test.st[,-16], cl=train.st[,16], k=1)
+
 confusionMatrix(knn1, valid.st[,16], positive = "1")$byClass["Balanced Accuracy"]
 confusionMatrix(knn1.test, test.st[,16], positive = "1")$byClass["Balanced Accuracy"]
 confusionMatrix(knn1, valid.st[,16], positive = "1")$byClass["F1"]
 confusionMatrix(knn1.test, test.st[,16], positive = "1")$byClass["F1"]
+```
+
+## Comparison of the methods
+
+```{r}
 F1 <- data.frame("model" = c("naive bayes","logistic regression","discriminant analysis","k-NN","neural nets", "classification tree","boosted", "bagged", "random"),
+                                
 "valid"=c(nb.valid.balanced.acc, lr.valid.balanced.acc, cm.da.valid$byClass["F1"], confusionMatrix(knn1, valid.st[,16], positive = "1")$byClass["F1"] , cm.nn1.valid$byClass["F1"], CT_cm_valid$byClass["F1"], boost_valid.cm$byClass["F1"], bag_valid.cm$byClass["F1"], rf_valid.cm$byClass["F1"]),
+
 "test"=c(nb.test.balanced.acc, lr.test.balanced.acc, cm.da.test$byClass["F1"], confusionMatrix(knn1.test, test.st[,16], positive = "1")$byClass["F1"], cm.nn1.test$byClass["F1"], CT_cm_test$byClass["F1"], boost_test.cm$byClass["F1"], bag_test.cm$byClass["F1"], rf_test.cm$byClass["F1"]))
 F1
+```
+
+```{r}
 balanced_accuracy <- data.frame("model" = c("naive bayes","logistic regression","discriminant analysis","k-NN","neural nets", "classification tree","boosted", "bagged", "random"),
+                                
 "valid"=c(nb.valid.balanced.acc, lr.valid.balanced.acc, cm.da.valid$byClass["Balanced Accuracy"], confusionMatrix(knn1, valid.st[,16], positive = "1")$byClass["Balanced Accuracy"] , cm.nn1.valid$byClass["Balanced Accuracy"], CT_cm_valid$byClass["Balanced Accuracy"], boost_valid.cm$byClass["Balanced Accuracy"], bag_valid.cm$byClass["Balanced Accuracy"], rf_valid.cm$byClass["Balanced Accuracy"]),
+
 "test"=c(nb.test.balanced.acc, lr.test.balanced.acc, cm.da.test$byClass["Balanced Accuracy"], confusionMatrix(knn1.test, test.st[,16], positive = "1")$byClass["Balanced Accuracy"], cm.nn1.test$byClass["Balanced Accuracy"], CT_cm_test$byClass["Balanced Accuracy"], boost_test.cm$byClass["Balanced Accuracy"], bag_test.cm$byClass["Balanced Accuracy"], rf_test.cm$byClass["Balanced Accuracy"]))
 balanced_accuracy
+```
+
+## Ensemble with neural nets, random forest, boosted
+
+```{r}
 #neural nets
 #valid
 nn.prob.valid <-  neuralnet::compute(NN_4_7, valid.dummy.scale[,-16])$net.result[,2]
 nn.class.valid=apply(nn1.predict.valid$net.result,1,which.max)-1
 nn.class.valid <- as.factor(nn.class.valid)
+
 #test
 nn.prob.test <-  neuralnet::compute(NN_4_7, test.dummy.scale[,-16])$net.result[,2]
 nn.class.test=apply(nn1.predict.test$net.result,1,which.max)-1
 nn.class.test <- as.factor(nn.class.test)
+
 #random forest
 #valid
 rf.class.valid <- predict(rf, valid)
@@ -426,6 +550,7 @@ rf.prob.valid <- predict(rf, valid, type="prob")[,2]
 #test
 rf.class.test <- predict(rf, test)
 rf.prob.test <- predict(rf, test, type="prob")[,2]
+
 #boosted
 #valid
 boost.class.valid <- predict(boost, valid)$class
@@ -435,78 +560,98 @@ boost.prob.valid <- predict(boost, valid)$prob[,2]
 boost.class.test <- predict(boost, test)$class
 boost.class.test <- as.factor(boost.class.test)
 boost.prob.test <- predict(boost, test)$prob[,2]
+```
+
+### Majority Vote
+
+```{r}
 outcome_class_valid <- data.frame(actual=valid$Output, neural_nets=nn.class.valid, random=rf.class.valid, boost=boost.class.valid)
+
 outcome_class_valid$majority_vote <- as.factor(ifelse(outcome_class_valid$neural_nets=='1' & outcome_class_valid$random=='1','1', ifelse(outcome_class_valid$neural_nets=='1' & outcome_class_valid$boost=='1','1', ifelse(outcome_class_valid$random=='1' & outcome_class_valid$boost=='1','1','0'))))
+
 outcome_class_test <- data.frame(actual=test$Output, neural_nets=nn.class.test, random=rf.class.test, boost=boost.class.test)
+
 outcome_class_test$majority_vote <- as.factor(ifelse(outcome_class_test$neural_nets=='1' & outcome_class_test$random=='1','1', ifelse(outcome_class_test$neural_nets=='1' & outcome_class_test$boost=='1','1', ifelse(outcome_class_test$random=='1' & outcome_class_test$boost=='1','1','0'))))
+```
+
+```{r}
 confusionMatrix(outcome_class_valid$actual, outcome_class_valid$majority_vote, positive="1")$byClass["Balanced Accuracy"]
 confusionMatrix(outcome_class_test$actual, outcome_class_test$majority_vote, positive="1")$byClass["Balanced Accuracy"]
+
 confusionMatrix(outcome_class_valid$actual, outcome_class_valid$majority_vote, positive="1")$byClass["F1"]
 confusionMatrix(outcome_class_test$actual, outcome_class_test$majority_vote, positive="1")$byClass["F1"]
+```
+
+### Average probabilities
+
+```{r}
 outcome_prob_valid <- data.frame(actual=valid$Output, neural_nets=nn.prob.valid, random=rf.prob.valid, boost=boost.prob.valid)
+
 outcome_prob_valid$average <- (outcome_prob_valid$neural_nets + outcome_prob_valid$random + outcome_prob_valid$boost)/3
+
 outcome_prob_valid$average_class <- as.factor(ifelse(outcome_prob_valid$average>0.5, 1, 0))
+
 outcome_prob_test <- data.frame(actual=test$Output, neural_nets=nn.prob.test, random=rf.prob.test, boost=boost.prob.test)
+
 outcome_prob_test$average <- (outcome_prob_test$neural_nets + outcome_prob_test$random + outcome_prob_test$boost)/3
+
 outcome_prob_test$average_class <- as.factor(ifelse(outcome_prob_test$average>0.5, 1, 0))
+```
+
+```{r}
 confusionMatrix(outcome_prob_valid$actual, outcome_prob_valid$average_class, positive="1")$byClass["Balanced Accuracy"]
 confusionMatrix(outcome_prob_test$actual, outcome_prob_test$average_class, positive="1")$byClass["Balanced Accuracy"]
+
 confusionMatrix(outcome_prob_valid$actual, outcome_prob_valid$average_class, positive="1")$byClass["F1"]
 confusionMatrix(outcome_prob_test$actual, outcome_prob_test$average_class, positive="1")$byClass["F1"]
+```
+
+## Comparison of all methods
+
+```{r}
 balanced_accuracy <- data.frame("model" = c("naive bayes","logistic regression","discriminant analysis","k-NN","neural nets", "classification tree","boosted", "bagged", "random", "majority vote", "average prob"),
+                                
 "valid"=c(nb.valid.balanced.acc, lr.valid.balanced.acc, cm.da.valid$byClass["Balanced Accuracy"], confusionMatrix(knn1, valid.st[,16], positive = "1")$byClass["Balanced Accuracy"] , cm.nn1.valid$byClass["Balanced Accuracy"], CT_cm_valid$byClass["Balanced Accuracy"], boost_valid.cm$byClass["Balanced Accuracy"], bag_valid.cm$byClass["Balanced Accuracy"], rf_valid.cm$byClass["Balanced Accuracy"], confusionMatrix(outcome_class_valid$actual, outcome_class_valid$majority_vote, positive="1")$byClass["Balanced Accuracy"], confusionMatrix(outcome_prob_valid$actual, outcome_prob_valid$average_class, positive="1")$byClass["Balanced Accuracy"]),
+
 "test"=c(nb.test.balanced.acc, lr.test.balanced.acc, cm.da.test$byClass["Balanced Accuracy"], confusionMatrix(knn1.test, test.st[,16], positive = "1")$byClass["Balanced Accuracy"], cm.nn1.test$byClass["Balanced Accuracy"], CT_cm_test$byClass["Balanced Accuracy"], boost_test.cm$byClass["Balanced Accuracy"], bag_test.cm$byClass["Balanced Accuracy"], rf_test.cm$byClass["Balanced Accuracy"], confusionMatrix(outcome_class_test$actual, outcome_class_test$majority_vote, positive="1")$byClass["Balanced Accuracy"], confusionMatrix(outcome_prob_test$actual, outcome_prob_test$average_class, positive="1")$byClass["Balanced Accuracy"]))
 balanced_accuracy
+```
+
+
+```{r}
 F1 <- data.frame("model" = c("naive bayes","logistic regression","discriminant analysis","k-NN","neural nets", "classification tree","boosted", "bagged", "random", "majority vote", "average prob"),
+                                
 "valid"=c(nb.valid.balanced.acc, lr.valid.balanced.acc, cm.da.valid$byClass["F1"], confusionMatrix(knn1, valid.st[,16], positive = "1")$byClass["F1"] , cm.nn1.valid$byClass["F1"], CT_cm_valid$byClass["F1"], boost_valid.cm$byClass["F1"], bag_valid.cm$byClass["F1"], rf_valid.cm$byClass["F1"], confusionMatrix(outcome_class_valid$actual, outcome_class_valid$majority_vote, positive="1")$byClass["F1"], confusionMatrix(outcome_prob_valid$actual, outcome_prob_valid$average_class, positive="1")$byClass["F1"]),
+
 "test"=c(nb.test.balanced.acc, lr.test.balanced.acc, cm.da.test$byClass["F1"], confusionMatrix(knn1.test, test.st[,16], positive = "1")$byClass["F1"], cm.nn1.test$byClass["F1"], CT_cm_test$byClass["F1"], boost_test.cm$byClass["F1"], bag_test.cm$byClass["F1"], rf_test.cm$byClass["F1"], confusionMatrix(outcome_class_test$actual, outcome_class_test$majority_vote, positive="1")$byClass["F1"], confusionMatrix(outcome_prob_test$actual, outcome_prob_test$average_class, positive="1")$byClass["F1"]))
 F1
+```
+
+```{r fig.height=4, fig.width=7}
 acc_melt <- melt(balanced_accuracy, id="model")
 ggplot(data=acc_melt, aes(x=reorder(model, -value), y=value, colour=variable))+
-geom_col(position="dodge", fill="grey96")+
-geom_text(aes(label=round(value,3)), vjust=-0.4, position=position_dodge(width=1), cex=2.1)+
-theme_bw()+
-theme(axis.text.x=element_text(angle=60, vjust=0.6))+
-labs(x="Model", title="Balanced accuracy for each method")
+  geom_col(position="dodge", fill="grey96")+
+  geom_text(aes(label=round(value,3)), vjust=-0.4, position=position_dodge(width=1), cex=2.5)+
+  theme_bw()+
+  theme(axis.text.x=element_text(angle=60, vjust=0.6))+
+  labs(x="Model", title="Balanced accuracy for each method")
+```
+
+```{r fig.height=4, fig.width=7}
 f1_melt <- melt(F1, id="model")
 ggplot(data=f1_melt, aes(x=reorder(model, -value), y=value, colour=variable))+
-geom_col(position="dodge", fill="grey96")+
-geom_text(aes(label=round(value,3)), vjust=-0.4, position=position_dodge(width=1), cex=2.1)+
-theme_bw()+
-theme(axis.text.x=element_text(angle=60, vjust=0.6))+
-labs(x="Model", title="F1 for each method")
-acc_melt <- melt(balanced_accuracy, id="model")
-ggplot(data=acc_melt, aes(x=reorder(model, -value), y=value, colour=variable))+
-geom_col(position="dodge", fill="grey96")+
-geom_text(aes(label=round(value,3)), vjust=-0.4, position=position_dodge(width=1), cex=2.1)+
-theme_bw()+
-theme(axis.text.x=element_text(angle=60, vjust=0.6))+
-labs(x="Model", title="Balanced accuracy for each method")
-acc_melt <- melt(balanced_accuracy, id="model")
-ggplot(data=acc_melt, aes(x=reorder(model, -value), y=value, colour=variable))+
-geom_col(position="dodge", fill="grey96")+
-geom_text(aes(label=round(value,3)), vjust=-0.4, position=position_dodge(width=1), cex=2.5)+
-theme_bw()+
-theme(axis.text.x=element_text(angle=60, vjust=0.6))+
-labs(x="Model", title="Balanced accuracy for each method")
-acc_melt <- melt(balanced_accuracy, id="model")
-ggplot(data=acc_melt, aes(x=reorder(model, -value), y=value, colour=variable))+
-geom_col(position="dodge", fill="grey96")+
-geom_text(aes(label=round(value,3)), vjust=-0.4, position=position_dodge(width=1), cex=2.5)+
-theme_bw()+
-theme(axis.text.x=element_text(angle=60, vjust=0.6))+
-labs(x="Model", title="Balanced accuracy for each method")
-acc_melt <- melt(balanced_accuracy, id="model")
-ggplot(data=acc_melt, aes(x=reorder(model, -value), y=value, colour=variable))+
-geom_col(position="dodge", fill="grey96")+
-geom_text(aes(label=round(value,3)), vjust=-0.4, position=position_dodge(width=1), cex=2.5)+
-theme_bw()+
-theme(axis.text.x=element_text(angle=60, vjust=0.6))+
-labs(x="Model", title="Balanced accuracy for each method")
-f1_melt <- melt(F1, id="model")
-ggplot(data=f1_melt, aes(x=reorder(model, -value), y=value, colour=variable))+
-geom_col(position="dodge", fill="grey96")+
-geom_text(aes(label=round(value,3)), vjust=-0.4, position=position_dodge(width=1), cex=2.5)+
-theme_bw()+
-theme(axis.text.x=element_text(angle=60, vjust=0.6))+
-labs(x="Model", title="F1 for each method")
+  geom_col(position="dodge", fill="grey96")+
+  geom_text(aes(label=round(value,3)), vjust=-0.4, position=position_dodge(width=1), cex=2.5)+
+  theme_bw()+
+  theme(axis.text.x=element_text(angle=60, vjust=0.6))+
+  labs(x="Model", title="F1 for each method")
+```
+
+
+
+
+
+
+
+
+
