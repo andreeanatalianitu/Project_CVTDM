@@ -1,0 +1,135 @@
+---
+title: "Textmining"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+TexTest<-read.csv("/Users/mariyaoshyyko/Downloads/Data-mining/GitHub/Project_CVTDM/onlinedeliverydata copy.csv")
+TexTest$Output <- recode(TexTest$Output, "Yes"=1, "No"=0)
+positive=TexTest[TexTest$Output==1,]
+negative=TexTest[TexTest$Output==0,]
+```
+
+### Positive
+```{r}
+library(dplyr)
+library(tidytext)
+
+positive_corp=Corpus(VectorSource(positive[,2]))
+# Convert the text to lower case
+positive_corp <- tm_map(positive_corp, content_transformer(tolower))
+# Remove numbers
+positive_corp <- tm_map(positive_corp, removeNumbers)
+# Remove english common stopwords
+positive_corp <- tm_map(positive_corp, removeWords, stopwords("english"))
+
+# Remove punctuations
+positive_corp <- tm_map(positive_corp, removePunctuation)
+# Eliminate extra white spaces
+positive_corp <- tm_map(positive_corp, stripWhitespace)
+# Text stemming
+positive_corp <- tm_map(positive_corp, stemDocument)
+
+# Remove your own stop word
+
+# specify your stopwords as a character vector
+positive_corp <- tm_map(positive_corp, removeWords, c("nil")) 
+
+tdm1 <- TermDocumentMatrix(positive_corp)
+inspect(tdm1)
+```
+
+
+```{r}
+library(wordcloud2)
+library(wordcloud)
+library(RColorBrewer)
+
+matrix <- as.matrix(tdm1) 
+words <- sort(rowSums(matrix),decreasing=TRUE) 
+df_positive <- data.frame(word = names(words),freq=words)
+
+set.seed(123) # for reproducibility 
+wordcloud(words = df_positive$word, freq = df_positive$freq, min.freq = 3,max.words=200, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
+```
+### Negative
+
+```{r}
+negavive_corp=Corpus(VectorSource(negative[,2]))
+# Convert the text to lower case
+negavive_corp <- tm_map(negavive_corp, content_transformer(tolower))
+# Remove numbers
+negavive_corp <- tm_map(negavive_corp, removeNumbers)
+# Remove english common stopwords
+negavive_corp <- tm_map(negavive_corp, removeWords, stopwords("english"))
+
+# Remove punctuations
+negavive_corp <- tm_map(negavive_corp, removePunctuation)
+# Eliminate extra white spaces
+negavive_corp <- tm_map(negavive_corp, stripWhitespace)
+# Text stemming
+negavive_corp <- tm_map(negavive_corp, stemDocument)
+
+# Remove your own stop word
+
+# specify your stopwords as a character vector
+negavive_corp <- tm_map(negavive_corp, removeWords, c("nil")) 
+
+tdm2 <- TermDocumentMatrix(negavive_corp)
+inspect(tdm2)
+```
+
+```{r}
+negavive_corp=Corpus(VectorSource(negavive[,2]))
+
+negavive_corp <- tm_map(negavive_corp, stripWhitespace)
+negavive_corp <- tm_map(negavive_corp, removePunctuation)
+negavive_corp <- tm_map(negavive_corp, removeNumbers)
+negavive_corp <- tm_map(negavive_corp, content_transformer(tolower))
+negavive_corp <- tm_map(negavive_corp, removeWords, stopwords("english"))
+
+tdm2 <- TermDocumentMatrix(negavive_corp)
+inspect(tdm2)
+```
+
+```{r}
+matrix <- as.matrix(tdm2) 
+words <- sort(rowSums(matrix),decreasing=TRUE) 
+df_negative <- data.frame(word = names(words),freq=words)
+
+set.seed(123) # for reproducibility 
+wordcloud(words = df_negative$word, freq = df_negative$freq, min.freq = 1,max.words=200, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
+```
+### All reviews
+```{r}
+corp <- Corpus(VectorSource(TexTest[,2]))
+corp <- tm_map(corp, stripWhitespace)
+corp <- tm_map(corp, removePunctuation)
+corp <- tm_map(corp, removeNumbers)
+corp <- tm_map(corp, content_transformer(tolower))
+corp <- tm_map(corp, removeWords, stopwords("english"))
+
+tdm <- TermDocumentMatrix(corp)
+inspect(tdm)
+```
+
+```{r}
+library(SnowballC)
+corp <- tm_map(corp, stemDocument)
+
+tdm <- TermDocumentMatrix(corp)
+inspect(tdm)
+tfidf <- weightTfIdf(tdm)
+
+library(lsa)
+lsa.tfidf <- lsa(tfidf, dim = 50)
+
+words.df <- as.data.frame(as.matrix(lsa.tfidf$dk))
+```
+
+
