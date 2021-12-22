@@ -9,7 +9,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(dplyr)
-TexTest<-read.csv("/Users/mariyaoshyyko/Downloads/Data-mining/GitHub/Project_CVTDM/onlinedeliverydata copy.csv")
+#TexTest<-read.csv("/Users/mariyaoshyyko/Downloads/Data-mining/GitHub/Project_CVTDM/onlinedeliverydata copy.csv")
+TexTest <- read.csv("C:/Users/andre/Desktop/Creating Value Project/onlinedeliverydata copy.csv")
 TexTest$Output <- recode(TexTest$Output, "Yes"=1, "No"=0)
 positive=TexTest[TexTest$Output==1,]
 negative=TexTest[TexTest$Output==0,]
@@ -19,6 +20,7 @@ negative=TexTest[TexTest$Output==0,]
 ```{r}
 library(dplyr)
 library(tidytext)
+library(tm)
 
 positive_corp=Corpus(VectorSource(positive[,2]))
 # Convert the text to lower case
@@ -153,6 +155,7 @@ subset.words=words.df[,-c(2,3,4)]
 ```
 
 ```{r}
+library(caret)
 set.seed(1)
 train_rows <- createDataPartition(words.df$Output, p = .5, list = FALSE)
 train <- words.df[train_rows,]
@@ -446,24 +449,40 @@ confusionMatrix(as.factor(ifelse(pred_test.log > 0.5, 1, 0)), test$Output, posit
 ## Comparison of the methods
 
 ```{r}
-F1 <- data.frame("model" = c("naive bayes","logistic regression","discriminant analysis","k-NN","neural nets", "classification tree","boosted", "bagged", "random"),
+F1 <- data.frame("model" = c("naive bayes","logistic regression","discriminant analysis", "classification tree","boosted", "bagged", "random"),
                  
-                 "valid"=c(nb.valid.balanced.acc, lr.valid.balanced.acc, cm.da.valid$byClass["F1"], confusionMatrix(knn1, valid.st[,16], positive = "1")$byClass["F1"] , cm.nn1.valid$byClass["F1"], CT_cm_valid$byClass["F1"], boost_valid.cm$byClass["F1"], bag_valid.cm$byClass["F1"], rf_valid.cm$byClass["F1"]),
+                 "valid"=c(nb.valid.balanced.acc, lr.valid.balanced.acc, cm.da.valid$byClass["F1"], CT_cm_valid$byClass["F1"], boost_valid.cm$byClass["F1"], bag_valid.cm$byClass["F1"], rf_valid.cm$byClass["F1"]),
                  
-                 "test"=c(nb.test.balanced.acc, lr.test.balanced.acc, cm.da.test$byClass["F1"], confusionMatrix(knn1.test, test.st[,16], positive = "1")$byClass["F1"], cm.nn1.test$byClass["F1"], CT_cm_test$byClass["F1"], boost_test.cm$byClass["F1"], bag_test.cm$byClass["F1"], rf_test.cm$byClass["F1"]))
+                 "test"=c(nb.test.balanced.acc, lr.test.balanced.acc, cm.da.test$byClass["F1"], CT_cm_test$byClass["F1"], boost_test.cm$byClass["F1"], bag_test.cm$byClass["F1"], rf_test.cm$byClass["F1"]))
 F1
 ```
 ### Result
 ```{r}
-balanced_accuracy <- data.frame("model" = c("naive bayes","logistic regression","discriminant analysis","k-NN","neural nets", "classification tree","boosted", "bagged", "random"),
+balanced_accuracy <- data.frame("model" = c("naive bayes","logistic regression","discriminant analysis","classification tree","boosted", "bagged", "random"),
                                 
-                                "valid"=c(nb.valid.balanced.acc, lr.valid.balanced.acc, cm.da.valid$byClass["Balanced Accuracy"], confusionMatrix(knn1, valid.st[,16], positive = "1")$byClass["Balanced Accuracy"] , cm.nn1.valid$byClass["Balanced Accuracy"], CT_cm_valid$byClass["Balanced Accuracy"], boost_valid.cm$byClass["Balanced Accuracy"], bag_valid.cm$byClass["Balanced Accuracy"], rf_valid.cm$byClass["Balanced Accuracy"]),
+                                "valid"=c(nb.valid.balanced.acc, lr.valid.balanced.acc, cm.da.valid$byClass["Balanced Accuracy"], CT_cm_valid$byClass["Balanced Accuracy"], boost_valid.cm$byClass["Balanced Accuracy"], bag_valid.cm$byClass["Balanced Accuracy"], rf_valid.cm$byClass["Balanced Accuracy"]),
                                 
-                                "test"=c(nb.test.balanced.acc, lr.test.balanced.acc, cm.da.test$byClass["Balanced Accuracy"], confusionMatrix(knn1.test, test.st[,16], positive = "1")$byClass["Balanced Accuracy"], cm.nn1.test$byClass["Balanced Accuracy"], CT_cm_test$byClass["Balanced Accuracy"], boost_test.cm$byClass["Balanced Accuracy"], bag_test.cm$byClass["Balanced Accuracy"], rf_test.cm$byClass["Balanced Accuracy"]))
+                                "test"=c(nb.test.balanced.acc, lr.test.balanced.acc, cm.da.test$byClass["Balanced Accuracy"], CT_cm_test$byClass["Balanced Accuracy"], boost_test.cm$byClass["Balanced Accuracy"], bag_test.cm$byClass["Balanced Accuracy"], rf_test.cm$byClass["Balanced Accuracy"]))
 balanced_accuracy
 ```
 
+```{r fig.height=4, fig.width=7}
+acc_melt <- melt(balanced_accuracy, id="model")
+ggplot(data=acc_melt, aes(x=reorder(model, -value), y=value, colour=variable))+
+  geom_col(position="dodge", fill="grey96")+
+  geom_text(aes(label=round(value,3)), vjust=-0.4, position=position_dodge(width=1), cex=2.5)+
+  theme_bw()+
+  theme(axis.text.x=element_text(angle=60, vjust=0.6))+
+  labs(x="Model", title="Balanced accuracy for each method")
+```
 
-
-
+```{r fig.height=4, fig.width=7}
+f1_melt <- melt(F1, id="model")
+ggplot(data=f1_melt, aes(x=reorder(model, -value), y=value, colour=variable))+
+  geom_col(position="dodge", fill="grey96")+
+  geom_text(aes(label=round(value,3)), vjust=-0.4, position=position_dodge(width=1), cex=2.5)+
+  theme_bw()+
+  theme(axis.text.x=element_text(angle=60, vjust=0.6))+
+  labs(x="Model", title="F1 for each method")
+```
 
